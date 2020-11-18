@@ -1,0 +1,7 @@
+The object in this prebuilt directory can be built from
+        platform/tools/tradefederation/core
+	platform/tools/tradefederation/contrib
+
+From the commit 6cc5e48d60c8cbec59115b9584a6a6700da324c5
+
+Jar is obtained from aosp-master@6981079 by unzipping tradefed.zip in this directory
