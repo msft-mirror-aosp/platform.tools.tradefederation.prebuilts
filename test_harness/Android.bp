@@ -14,8 +14,17 @@
  * limitations under the License.
  */
 
+// This file contains all the build target that we expect tests writers
+// to need to build tests.
+
 java_import_host {
     name: "tradefed",
     jars: [":tradefed-prebuilt"],
+    installable: true,
+}
+
+java_import_host {
+    name: "tradefed-test-framework",
+    jars: [":tradefed-test-framework-prebuilt"],
     installable: true,
 }
