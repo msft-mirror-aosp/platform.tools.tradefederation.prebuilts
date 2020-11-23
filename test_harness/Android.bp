@@ -23,8 +23,21 @@ java_import_host {
     installable: true,
 }
 
+// Target used for backward compatibility with suites
+java_import_host {
+    name: "tradefed-no-fwk",
+    jars: [":tradefed-prebuilt"],
+    installable: true,
+}
+
 java_import_host {
     name: "tradefed-test-framework",
     jars: [":tradefed-test-framework-prebuilt"],
+    installable: true,
+}
+
+java_import_host {
+    name: "loganalysis",
+    jars: [":loganalysis-prebuilt"],
     installable: true,
 }
