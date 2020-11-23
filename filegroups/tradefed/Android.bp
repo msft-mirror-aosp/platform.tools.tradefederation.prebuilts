@@ -23,6 +23,36 @@ filegroup {
 }
 
 filegroup {
+    name: "tradefed-tests-prebuilt",
+    srcs: ["tradefed-tests.jar"],
+}
+
+filegroup {
     name: "tradefed-test-framework-prebuilt",
     srcs: ["tradefed-test-framework.jar"],
+}
+
+filegroup {
+    name: "tradefed-isolation-prebuilt",
+    srcs: ["tradefed-isolation.jar"],
+}
+
+filegroup {
+    name: "tradefed-contrib-prebuilt",
+    srcs: ["tradefed-contrib.jar"],
+}
+
+filegroup {
+    name: "tf-contrib-tests-prebuilt",
+    srcs: ["tf-contrib-tests.jar"],
+}
+
+filegroup {
+    name: "loganalysis-prebuilt",
+    srcs: ["loganalysis.jar"],
+}
+
+filegroup {
+    name: "loganalysis-tests-prebuilt",
+    srcs: ["loganalysis-tests.jar"],
 }
