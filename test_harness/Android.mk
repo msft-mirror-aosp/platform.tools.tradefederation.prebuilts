@@ -17,7 +17,7 @@ include $(CLEAR_VARS)
 
 ifeq (,$(wildcard $(LOCAL_PATH)/../../core))
 .PHONY: tradefed-all
-tradefed-all-prebuilt: tradefed
+tradefed-all: tradefed
 
 tradefed_dist_artifacts := tradefed.jar tradefed-tests.jar tradefed-test-framework.jar loganalysis.jar loganalysis-tests.jar tradefed-contrib.jar tf-contrib-tests.jar tradefed-isolation.jar tradefed.sh tradefed_win.bat script_help.sh atest_tradefed.sh TradeFedUiTestApp.apk TradeFedTestApp.apk version.txt
 
@@ -32,6 +32,8 @@ $(tradefed_dist_zip) : $(SOONG_ZIP) $(foreach f,$(tradefed_dist_copy_pairs),$(ca
 	rm -rf $(dir $@)/tmp && mkdir -p $(dir $@)/tmp
 	$(foreach f,$(PRIVATE_COPY_PAIRS), \
 	  cp -f $(call word-colon,1,$(f)) $(dir $@)/tmp/$(call word-colon,2,$(f)) &&) true
+	$(SOONG_ZIP) -o $@ -C $(dir $@)/tmp \
+	  $(foreach f,$(PRIVATE_COPY_PAIRS),-f $(dir $@)/tmp/$(call word-colon,2,$(f)))
 
 $(call dist-for-goals, tradefed, $(tradefed_dist_zip))
 
