@@ -19,7 +19,10 @@
 
 java_import_host {
     name: "tradefed",
-    jars: [":tradefed-prebuilt"],
+    jars: [
+        ":tradefed-prebuilt",
+        ":tradefed-test-framework-prebuilt",
+    ],
     installable: true,
 }
 
