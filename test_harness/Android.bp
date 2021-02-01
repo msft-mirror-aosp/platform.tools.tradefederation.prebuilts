@@ -19,7 +19,10 @@
 
 java_import_host {
     name: "tradefed",
-    jars: [":tradefed-prebuilt"],
+    jars: [
+        ":tradefed-prebuilt",
+        ":tradefed-test-framework-prebuilt",
+    ],
     installable: true,
 }
 
@@ -39,5 +42,18 @@ java_import_host {
 java_import_host {
     name: "loganalysis",
     jars: [":loganalysis-prebuilt"],
+    installable: true,
+}
+
+// Targets for test suites
+java_import_host {
+    name: "compatibility-tradefed",
+    jars: [":compatibility-tradefed-prebuilt"],
+    installable: true,
+}
+
+java_import_host {
+    name: "compatibility-host-util",
+    jars: [":compatibility-host-util-prebuilt"],
     installable: true,
 }
