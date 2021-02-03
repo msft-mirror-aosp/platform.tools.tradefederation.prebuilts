@@ -1,7 +1,0 @@
-The object in this prebuilt directory can be built from
-        platform/tools/tradefederation/core
-        platform/tools/tradefederation/contrib
-
-From the commit 95ebd4b29190ca6f06e17e90d4604b0e551a57d1
-
-Files are obtained from git_master:test_suites_x86_64@6995264 from tradefed.zip
