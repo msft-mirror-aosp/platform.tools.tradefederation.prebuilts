@@ -26,6 +26,8 @@ java_import_host {
     jars: [
         ":tradefed-prebuilt",
         ":tradefed-test-framework-prebuilt",
+        // The following are for platform branches only
+        ":platformprotos",
     ],
     installable: true,
 }
