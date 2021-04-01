@@ -21,7 +21,7 @@ tradefed-core: tradefed atest_tradefed.sh
 .PHONY: tradefed-all
 tradefed-all: tradefed atest_tradefed.sh
 
-tradefed_dist_artifacts := tradefed.jar tradefed-tests.jar tradefed-test-framework.jar loganalysis.jar loganalysis-tests.jar tradefed-contrib.jar tf-contrib-tests.jar tradefed-isolation.jar tradefed.sh tradefed_win.bat script_help.sh atest_tradefed.sh TradeFedUiTestApp.apk TradeFedTestApp.apk version.txt
+tradefed_dist_artifacts := tradefed.jar tradefed-tests.jar tradefed-test-framework.jar loganalysis.jar tradefed-contrib.jar tf-contrib-tests.jar tradefed-isolation.jar tradefed.sh tradefed_win.bat script_help.sh atest_tradefed.sh TradeFedUiTestApp.apk TradeFedTestApp.apk version.txt
 
 tradefed_dist_copy_pairs := $(foreach m, $(tradefed_dist_artifacts), $(LOCAL_PATH)/../filegroups/tradefed/$(m):$(m))
 
