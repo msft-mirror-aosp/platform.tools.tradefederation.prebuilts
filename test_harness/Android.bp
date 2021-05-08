@@ -24,10 +24,9 @@ package {
 java_import_host {
     name: "tradefed",
     jars: [
+        ":platformprotos", // Should be first to force using protos from the branch
         ":tradefed-prebuilt",
         ":tradefed-test-framework-prebuilt",
-        // The following are for platform branches only
-        ":platformprotos",
     ],
     installable: true,
 }
