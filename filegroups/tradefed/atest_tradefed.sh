@@ -37,7 +37,6 @@ if [[ ! -z "$ANDROID_HOST_OUT" ]]; then
           vts-tradefed.jar
           vts10-tradefed.jar
           csuite-harness.jar
-          tradefed-isolation.jar
           host-libprotobuf-java-full.jar
           cts-dalvik-host-test-runner.jar"
     for dep in $deps; do
@@ -58,6 +57,6 @@ java $RDBG_FLAG \
     -XX:+HeapDumpOnOutOfMemoryError \
     -XX:-OmitStackTraceInFastThrow \
     $TRADEFED_OPTS \
-    -cp ${TF_PATH} \
+    -cp "${TF_PATH}" \
     -DTF_JAR_DIR=${TF_JAR_DIR} ${java_tmp_dir_opt} \
     com.android.tradefed.command.CommandRunner "$@"
