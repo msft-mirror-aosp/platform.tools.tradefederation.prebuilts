@@ -16,8 +16,10 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 ifeq (,$(wildcard $(LOCAL_PATH)/../../core))
+.PHONY: tradefed-core
+tradefed-core: tradefed atest_tradefed.sh
 .PHONY: tradefed-all
-tradefed-all: tradefed
+tradefed-all: tradefed atest_tradefed.sh
 
 tradefed_dist_artifacts := tradefed.jar tradefed-tests.jar tradefed-test-framework.jar loganalysis.jar loganalysis-tests.jar tradefed-contrib.jar tf-contrib-tests.jar tradefed-isolation.jar tradefed.sh tradefed_win.bat script_help.sh atest_tradefed.sh TradeFedUiTestApp.apk TradeFedTestApp.apk version.txt
 
