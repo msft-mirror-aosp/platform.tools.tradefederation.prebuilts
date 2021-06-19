@@ -17,6 +17,10 @@
 // This file contains all the build target that we expect tests writers
 // to need to build tests.
 
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 java_import_host {
     name: "tradefed",
     jars: [
@@ -36,7 +40,10 @@ java_import_host {
 
 java_import_host {
     name: "tradefed-test-framework",
-    jars: [":tradefed-test-framework-prebuilt"],
+    jars: [
+        ":platformprotos", // Should be first to force using protos from the branch
+        ":tradefed-test-framework-prebuilt"
+    ],
     installable: true,
 }
 
