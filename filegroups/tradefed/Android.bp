@@ -17,6 +17,10 @@
 // This build file list of the prebuilts artifacts for test harness
 // and reference them as filegroups individually
 
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 filegroup {
     name: "tradefed-prebuilt",
     visibility: [
