@@ -96,7 +96,10 @@ if [ ! -z "${ANDROID_HOST_OUT_TESTCASES}" ]; then
     for folder in ${ANDROID_HOST_OUT_TESTCASES}/*; do
         for entry in "$folder"/*; do
             if [[ "$entry" = *".jar"* ]]; then
-                TF_PATH=${TF_PATH}:$entry
+                # Exclude any jar that looks like robolectric
+                if ! grep -q android/app/Application.class "$entry"; then
+                    TF_PATH=${TF_PATH}:$entry
+                fi
             fi
         done
     done
