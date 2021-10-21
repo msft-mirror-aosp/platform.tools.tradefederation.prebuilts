@@ -40,6 +40,12 @@ if [ -n "${LOCAL_AUTH}" ]; then
   local_client=$?
   if [ "${local_client}" -eq 0 ]; then
     gcloud auth application-default login --scopes=https://www.googleapis.com/auth/androidbuild.internal --client-id-file "$LOCAL_CLIENT_FILE"
+    gcloud_res=$?
+    if [ "${gcloud_res}" -ne 0 ]; then
+        echo "Error with auth. aborting tradefed.sh"
+        rm "$LOCAL_CLIENT_FILE"
+        exit 1
+    fi
   fi
 fi
 
