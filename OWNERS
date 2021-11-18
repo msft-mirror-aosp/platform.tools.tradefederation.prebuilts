@@ -5,3 +5,7 @@ guangzhu@google.com
 jdesprez@google.com
 murj@google.com
 tsu@google.com
+
+# For owner review (+1) of prebuilt drops.
+# This is the role account for the rapid runner that generates the prebuilt drop changes.
+g2.prod.tradefed-prebuilt-releaser@google.com
