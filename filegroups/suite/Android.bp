@@ -17,10 +17,6 @@
 // This build file list of the prebuilts artifacts for test suites
 // and reference them as filegroups individually
 
-package {
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
-
 filegroup {
     name: "compatibility-tradefed-prebuilt",
     visibility: [
@@ -36,3 +32,4 @@ filegroup {
     ],
     srcs: ["compatibility-host-util.jar"],
 }
+
