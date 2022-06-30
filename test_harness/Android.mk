@@ -41,6 +41,9 @@ $(tradefed_dist_zip) : $(SOONG_ZIP) $(foreach f,$(tradefed_dist_copy_pairs),$(ca
 	$(SOONG_ZIP) -o $@ -C $(dir $@)/tmp \
 	  $(foreach f,$(PRIVATE_COPY_PAIRS),-f $(dir $@)/tmp/$(call word-colon,2,$(f)))
 
+$(call declare-1p-container,$(tradefed_dist_zip),tools/tradefederation/prebuilts)
+$(call declare-container-license-deps,$(tradefed_dist_zip),$(filter $(OUT_DIR)/%,$(foreach f,$(tradefed_dist_copy_pairs), $(call word-colon,1,$(f)))),$(tradefed_dist_zip):)
+
 $(call dist-for-goals, tradefed, $(tradefed_dist_zip))
 
 tradefed_dist_copy_pairs :=
