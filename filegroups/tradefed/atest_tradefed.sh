@@ -15,7 +15,10 @@
 # limitations under the License.
 
 # A helper script that launches Trade Federation for atest
-source "$(dirname $0)/script_help.sh"
+if [[ -z "${ATEST_HELPER}" ]]; then
+    ATEST_HELPER="$(dirname $0)/atest_script_help.sh"
+fi
+source $ATEST_HELPER
 
 # TODO b/63295046 (sbasi) - Remove this when LOCAL_JAVA_LIBRARIES includes
 # installation.
@@ -31,19 +34,35 @@ if [[ ! -z "$ANDROID_HOST_OUT" ]]; then
     # then other *ts-tradefed.jar.
     deps="atest-tradefed.jar
           compatibility-host-util.jar
+          hamcrest-library.jar
           hosttestlib.jar
           cts-tradefed.jar
           sts-tradefed.jar
           vts-tradefed.jar
-          vts10-tradefed.jar
           csuite-harness.jar
+          tradefed-isolation.jar
           host-libprotobuf-java-full.jar
-          cts-dalvik-host-test-runner.jar"
+          cts-dalvik-host-test-runner.jar
+          compatibility-tradefed.jar"
     for dep in $deps; do
         if [ -f "$ANDROID_HOST_OUT/framework/$dep" ]; then
           TF_PATH+=":$ANDROID_HOST_OUT/framework/$dep"
         fi
     done
+fi
+
+# Accumulate prebuilt jars as a part of classpath when the configurations are
+# packaged into a prebuilt jar (b/192046472)
+TF_CORE_DIR=$ANDROID_BUILD_TOP/tools/tradefederation/core
+if [ ! -d $TF_CORE_DIR ]; then
+    TF_DIR=$ANDROID_BUILD_TOP/tools/tradefederation/prebuilts/filegroups
+    GTF_DIR=$ANDROID_BUILD_TOP/vendor/google_tradefederation/prebuilts/filegroups
+    PREBUILT_JARS=$(find $TF_DIR $GTF_DIR -type f -name '*.jar' 2>/dev/null)
+    if [ -n "$PREBUILT_JARS" ]; then
+        for jar in $PREBUILT_JARS; do
+            TF_PATH+=":$jar"
+        done
+    fi
 fi
 
 if [ "$(uname)" == "Darwin" ]; then
@@ -52,11 +71,27 @@ if [ "$(uname)" == "Darwin" ]; then
     java_tmp_dir_opt="-Djava.io.tmpdir=$local_tmp_dir"
 fi
 
+# Override the TF classpath with the minimal set of jars that correspond to the
+# tests being run. This only happens when the Atest `--minimal-build` flag is
+# enabled.
+# TODO(b/283352284): Remove unnecessary entries once --minimal-build is the
+# default.
+if [ -n "${ATEST_HOST_JARS}" ]; then
+    echo "Replaced TF_PATH from ${TF_PATH} to ${ATEST_HOST_JARS}"
+    TF_PATH=${ATEST_HOST_JARS}
+fi
+
+# Customize TF related settings for ATest local run to align with test runs on
+# CI.
+extra_settings="
+  --test-arg com.android.tradefed.testtype.python.PythonBinaryHostTest:python-options:-vv"
+
+
 # Note: must leave $RDBG_FLAG and $TRADEFED_OPTS unquoted so that they go away when unset
-java $RDBG_FLAG \
+LOCAL_MODE=1 START_FEATURE_SERVER=1 ${TF_JAVA} $RDBG_FLAG \
     -XX:+HeapDumpOnOutOfMemoryError \
     -XX:-OmitStackTraceInFastThrow \
     $TRADEFED_OPTS \
     -cp "${TF_PATH}" \
     -DTF_JAR_DIR=${TF_JAR_DIR} ${java_tmp_dir_opt} \
-    com.android.tradefed.command.CommandRunner "$@"
+    com.android.tradefed.command.CommandRunner "$@" $extra_settings
