@@ -50,6 +50,7 @@ LOG_PATH = 'logs/cas_uploader.log'
 # TODO(b/298890453) Add artifacts after this script is attached to build process.
 ARTIFACTS = [
     # test_suite targets
+    ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
     ArtifactConfig('android-gts.zip', True),
     ArtifactConfig('android-mts.zip', True),
