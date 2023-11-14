@@ -96,12 +96,15 @@ ARTIFACTS = [
     ArtifactConfig('general-tests.zip', True),
     ArtifactConfig('general-tests_configs.zip', True),
     ArtifactConfig('general-tests_host-shared-libs.zip', True),
+    ArtifactConfig('tradefed.zip', True),
     ArtifactConfig('google-tradefed.zip', True),
     ArtifactConfig('robolectric-tests.zip', True),
 
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
     ArtifactConfig('device-tests.zip', True),
+    ArtifactConfig('device-tests_configs.zip', True),
+    ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-img-*zip', False)
 ]
 
