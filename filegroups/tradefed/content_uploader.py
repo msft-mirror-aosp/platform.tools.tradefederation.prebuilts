@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
-#  Copyright (C) 2023 The Android Open Source Project
+#
+#  Copyright (C) 2022 The Android Open Source Project
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -21,9 +21,11 @@ import glob
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 import time
+import re
 
 
 @dataclasses.dataclass
@@ -39,12 +41,44 @@ class ArtifactConfig:
     unzip: bool
     exclude_filters: list[str] = dataclasses.field(default_factory=list)
 
+
+@dataclasses.dataclass
+class CasInfo:
+    """Basic information of CAS server and client.
+
+    Attributes:
+        cas_instance: the instance name of CAS service.
+        cas_service: the address of CAS service.
+        client_path: path to the CAS uploader client.
+        version: version of the CAS uploader client, in turple format.
+    """
+    cas_instance: str
+    cas_service: str
+    client_path: str
+    client_version: tuple
+
+
+@dataclasses.dataclass
+class UploadResult:
+    """Result of uploading a single artifact with CAS client.
+
+    Attributes:
+        digest: root digest of the artifact.
+        content_details: detail information of all uploaded files inside the uploaded artifact.
+    """
+    digest: str
+    content_details: list[dict[str,any]]
+
+
 CAS_UPLOADER_PREBUILT_PATH = 'tools/tradefederation/prebuilts/'
 CAS_UPLOADER_PATH = 'tools/content_addressed_storage/prebuilts/'
 CAS_UPLOADER_BIN = 'casuploader'
 
 UPLOADER_TIMEOUT_SECS = 600 # 10 minutes
+
+DIGESTS_PATH = 'cas_digests.json'
 LOG_PATH = 'logs/cas_uploader.log'
+CONTENT_DETAILS_PATH = 'logs/cas_content_details.json'
 
 # Configurations of artifacts will be uploaded to CAS.
 # TODO(b/298890453) Add artifacts after this script is attached to build process.
@@ -62,12 +96,15 @@ ARTIFACTS = [
     ArtifactConfig('general-tests.zip', True),
     ArtifactConfig('general-tests_configs.zip', True),
     ArtifactConfig('general-tests_host-shared-libs.zip', True),
+    ArtifactConfig('tradefed.zip', True),
     ArtifactConfig('google-tradefed.zip', True),
     ArtifactConfig('robolectric-tests.zip', True),
 
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
     ArtifactConfig('device-tests.zip', True),
+    ArtifactConfig('device-tests_configs.zip', True),
+    ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-img-*zip', False)
 ]
 
@@ -76,7 +113,17 @@ ARTIFACTS = [
 # purpose.
 EXPERIMENT_ARTIFACT_CONFIGS = []
 
-def _get_client():
+def _init_cas_info() -> CasInfo:
+    client_path = _get_client()
+    return CasInfo(
+        _get_env_var('RBE_instance', check=True),
+        _get_env_var('RBE_service', check=True),
+        client_path,
+        _get_client_version(client_path)
+    )
+
+
+def _get_client() -> str:
     bin_path = os.path.join(CAS_UPLOADER_PATH, CAS_UPLOADER_BIN)
     if os.path.isfile(bin_path):
         logging.info('Using client at %s', bin_path)
@@ -86,6 +133,26 @@ def _get_client():
         raise ValueError('Could not find casuploader binary')
     logging.info('Using client at %s', client[0])
     return client[0]
+
+
+def _get_client_version(client_path: str) -> int:
+    """Get the version of CAS client in turple format."""
+    version_output = ''
+    try:
+        version_output = subprocess.check_output([client_path, '-version']).decode('utf-8').strip()
+        matched = re.findall(r'version: (\d+\.\d+)', version_output)
+        if not matched:
+            logging.warning('Failed to parse CAS client version. Output: %s', version_output)
+            return (0, 0)
+        version = tuple(map(int, matched[0].split('.')))
+        logging.info('CAS client version is %s', version)
+        return version
+    # pylint: disable=broad-exception-caught
+    except Exception as e:
+    # pylint: enable=broad-exception-caught
+        logging.warning('Failed to get CAS client version. Output: %s. Error %s', version_output, e)
+        return (0, 0)
+
 
 def _get_env_var(key: str, default=None, check=False):
     value = os.environ.get(key, default)
@@ -109,8 +176,7 @@ def _parse_additional_artifacts(args) -> list[ArtifactConfig]:
 
 
 def _upload(
-        cas_instance: str,
-        cas_service: str,
+        cas_info: CasInfo,
         artifact: ArtifactConfig,
         working_dir: str,
         log_file: str,
@@ -118,8 +184,7 @@ def _upload(
     """Upload the artifact to CAS by casuploader binary.
 
     Args:
-      cas_instance: the instance name of CAS service.
-      cas_service: the address of CAS service.
+      cas_info: the basic CAS server information.
       artifact: the artifact to be uploaded to CAS.
       working_dir: the directory for intermediate files.
       log_file: the file where to add the upload logs.
@@ -127,18 +192,23 @@ def _upload(
     Returns: the digest of the uploaded artifact, formatted as "<hash>/<size>".
       returns None if artifact upload fails.
     """
-    with tempfile.NamedTemporaryFile(mode='w+') as digest_file:
-        start = time.time()
+    # `-dump-file-details` only supports on cas uploader V1.0 or later.
+    dump_file_details = (cas_info.client_version >= (1, 0))
+    if not dump_file_details:
+        logging.warning('-dump-file-details is not enabled')
+
+    with tempfile.NamedTemporaryFile(mode='w+') as digest_file, tempfile.NamedTemporaryFile(
+      mode='w+') as content_details_file:
         logging.info(
-            'Uploading %s to CAS instance %s', artifact.source_path, cas_instance
+            'Uploading %s to CAS instance %s', artifact.source_path, cas_info.cas_instance
         )
 
         cmd = [
-            _get_client(),
+            cas_info.client_path,
             '-cas-instance',
-            cas_instance,
+            cas_info.cas_instance,
             '-cas-addr',
-            cas_service,
+            cas_info.cas_service,
             '-dump-digest',
             digest_file.name,
             '-use-adc',
@@ -150,14 +220,18 @@ def _upload(
             # TODO(b/250643926) This is a workaround to handle non-directory files.
             tmp_dir = tempfile.mkdtemp(dir=working_dir)
             target_path = os.path.join(tmp_dir, os.path.basename(artifact.source_path))
-            os.link(artifact.source_path, target_path)
+            shutil.copy(artifact.source_path, target_path)
             cmd = cmd + ['-dir-path', tmp_dir]
 
         for exclude_filter in artifact.exclude_filters:
             cmd = cmd + ['-exclude-filters', exclude_filter]
 
+        if dump_file_details:
+            cmd = cmd + ['-dump-file-details', content_details_file.name]
+
         try:
-            with open(log_file, "a") as outfile:
+            logging.info('Running command: %s', cmd)
+            with open(log_file, 'a', encoding='utf8') as outfile:
                 subprocess.run(
                     cmd,
                     check=True,
@@ -167,15 +241,10 @@ def _upload(
                     encoding='utf-8',
                     timeout=UPLOADER_TIMEOUT_SECS
                 )
-            logging.info(
-                'Elapsed time of uploading %s: %d seconds',
-                artifact.source_path,
-                time.time() - start,
-            )
         except subprocess.CalledProcessError as e:
             logging.warning(
                 'Failed to upload %s to CAS instance %s. Skip.\nError message: %s\nLog: %s',
-                artifact.source_path, cas_instance, e, e.stdout,
+                artifact.source_path, cas_info.cas_instance, e, e.stdout,
             )
             return None
 
@@ -183,26 +252,79 @@ def _upload(
         digest = digest_file.read()
         if digest:
             logging.info('Uploaded %s to CAS. Digest: %s', artifact.source_path, digest)
-            return digest
-        logging.warning(
-            'No digest is dumped for file %s, the uploading may fail.', artifact.source_path)
-        return None
+        else:
+            logging.warning(
+                'No digest is dumped for file %s, the uploading may fail.', artifact.source_path)
+            return None
+
+        content_details = None
+        if dump_file_details:
+            try:
+                content_details = json.loads(content_details_file.read())
+            except json.JSONDecodeError as e:
+                logging.warning('Failed to parse uploaded content details: %s', e)
+
+        return UploadResult(digest, content_details)
 
 
 def _output_results(
-        cas_instance: str,
-        cas_service: str,
+        cas_info: CasInfo,
+        output_dir: str,
         digests: dict[str, str],
-        output_file: str,
+        content_details: list[dict[str, any]],
 ):
-    output_data = {
-        'cas_instance': cas_instance,
-        'cas_service': cas_service,
+    digests_output = {
+        'cas_instance': cas_info.cas_instance,
+        'cas_service': cas_info.cas_service,
+        'client_version': '.'.join(map(str, cas_info.client_version)),
         'files': digests,
     }
-    with open(output_file, 'w', encoding="utf8") as writer:
-        writer.write(json.dumps(output_data, sort_keys=True, indent=2))
-    logging.info('Output digests to %s', output_file)
+    output_path = os.path.join(output_dir, DIGESTS_PATH)
+    with open(output_path, 'w', encoding='utf8') as writer:
+        writer.write(json.dumps(digests_output, sort_keys=True, indent=2))
+    logging.info('Output digests to %s', output_path)
+
+    output_path = os.path.join(output_dir, CONTENT_DETAILS_PATH)
+    with open(output_path, 'w', encoding='utf8') as writer:
+        writer.write(json.dumps(content_details, sort_keys=True, indent=2))
+    logging.info('Output uploaded content details to %s', output_path)
+
+
+def _upload_all_artifacts(cas_info: CasInfo, all_artifacts: ArtifactConfig,
+    dist_dir: str, working_dir: str, log_file:str):
+    file_digests = {}
+    content_details = []
+    for artifact in all_artifacts:
+        source_path = artifact.source_path
+        for f in glob.glob(dist_dir + '/**/' + source_path, recursive=True):
+            start = time.time()
+            name = os.path.basename(f)
+            artifact.source_path = f
+            result = _upload(cas_info, artifact, working_dir, log_file)
+
+            if result and result.digest:
+                file_digests[name] = result.digest
+            else:
+                logging.warning(
+                    'Skip to save the digest of file %s, the uploading may fail', name
+                )
+            if result and result.content_details:
+                content_details.append({"artifact": name, "details": result.content_details})
+            else:
+                logging.warning('Skip to save the content details of file %s', name)
+
+            logging.info(
+                'Elapsed time of uploading %s: %d seconds\n\n',
+                artifact.source_path,
+                time.time() - start,
+            )
+    _output_results(
+        cas_info,
+        dist_dir,
+        file_digests,
+        content_details,
+    )
+
 
 
 def main():
@@ -217,46 +339,24 @@ def main():
     )
     args = parser.parse_args()
 
-    cas_instance = _get_env_var('RBE_instance', check=True)
-    cas_service = _get_env_var('RBE_service', check=True)
     dist_dir = _get_env_var('DIST_DIR', check=True)
-
-    log_file = f'{dist_dir}/{LOG_PATH}'
+    log_file = os.path.join(dist_dir, LOG_PATH)
     print('content_uploader.py will export logs to:', log_file)
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s %(levelname)s %(message)s',
         filename=log_file,
     )
-
     logging.info('Environment variables of running server: %s', os.environ)
 
     additional_artifacts = _parse_additional_artifacts(args)
+    cas_info = _init_cas_info()
 
     with tempfile.TemporaryDirectory() as working_dir:
         logging.info('The working dir is %s', working_dir)
-
         start = time.time()
-        file_digests = {}
-        for artifact in ARTIFACTS + additional_artifacts:
-            source_path = artifact.source_path
-            for f in glob.glob(dist_dir + '/**/' + source_path, recursive=True):
-                name = os.path.basename(f)
-                artifact.source_path = f
-                digest = _upload(cas_instance, cas_service, artifact, working_dir, log_file)
-                if digest:
-                    file_digests[name] = digest
-                else:
-                    logging.warning(
-                        'Skip to save the digest of file %s, the uploading may fail', name
-                    )
-
-        _output_results(
-            cas_instance,
-            cas_service,
-            file_digests,
-            os.path.join(dist_dir, 'cas_digests.json'),
-        )
+        _upload_all_artifacts(cas_info, ARTIFACTS + additional_artifacts,
+            dist_dir, working_dir, log_file)
         logging.info('Total time of uploading build artifacts to CAS: %d seconds',
                      time.time() - start)
 
