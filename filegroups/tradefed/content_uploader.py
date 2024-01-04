@@ -84,6 +84,7 @@ CONTENT_DETAILS_PATH = 'logs/cas_content_details.json'
 # TODO(b/298890453) Add artifacts after this script is attached to build process.
 ARTIFACTS = [
     # test_suite targets
+    ArtifactConfig('android-catbox.zip', True),
     ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
     ArtifactConfig('android-gts.zip', True),
@@ -106,6 +107,9 @@ ARTIFACTS = [
     ArtifactConfig('device-tests.zip', True),
     ArtifactConfig('device-tests_configs.zip', True),
     ArtifactConfig('*-tests-*zip', True),
+    ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
+    ArtifactConfig('*-continuous_native_tests-*zip', True),
+    ArtifactConfig('cvd-host_package.tar.gz', False),
     ArtifactConfig('*-img-*zip', False)
 ]
 
@@ -194,7 +198,7 @@ def _upload(
       returns None if artifact upload fails.
     """
     # `-dump-file-details` only supports on cas uploader V1.0 or later.
-    dump_file_details = (cas_info.client_version >= (1, 0))
+    dump_file_details = cas_info.client_version >= (1, 0)
     if not dump_file_details:
         logging.warning('-dump-file-details is not enabled')
 
@@ -242,11 +246,15 @@ def _upload(
                     encoding='utf-8',
                     timeout=UPLOADER_TIMEOUT_SECS
                 )
-        except subprocess.CalledProcessError as e:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             logging.warning(
                 'Failed to upload %s to CAS instance %s. Skip.\nError message: %s\nLog: %s',
                 artifact.source_path, cas_info.cas_instance, e, e.stdout,
             )
+            return None
+        except subprocess.SubprocessError as e:
+            logging.warning('Failed to upload %s to CAS instance %s. Skip.\n. Error %s',
+                artifact.source_path, cas_info.cas_instance, e)
             return None
 
         # Read digest of the root directory or file from dumped digest file.
