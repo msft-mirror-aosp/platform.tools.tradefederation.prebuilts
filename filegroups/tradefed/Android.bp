@@ -30,14 +30,6 @@ filegroup {
 }
 
 filegroup {
-    name: "tradefed-test-framework-prebuilt",
-    visibility: [
-        "//tools/tradefederation/prebuilts/test_harness",
-    ],
-    srcs: ["tradefed-test-framework.jar"],
-}
-
-filegroup {
     name: "loganalysis-prebuilt",
     visibility: [
         "//tools/tradefederation/prebuilts/test_harness",
