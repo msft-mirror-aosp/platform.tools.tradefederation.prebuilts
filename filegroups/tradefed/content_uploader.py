@@ -111,6 +111,8 @@ ARTIFACTS = [
     ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
     ArtifactConfig('*-continuous_native_tests-*zip', True),
     ArtifactConfig('cvd-host_package.tar.gz', False),
+    ArtifactConfig('bootloader.img', False),
+    ArtifactConfig('radio.img', False),
     ArtifactConfig('*-target_files-*.zip', True),
     ArtifactConfig('*-img-*zip', False)
 ]
