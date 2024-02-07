@@ -88,6 +88,7 @@ ARTIFACTS = [
     ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
     ArtifactConfig('android-gts.zip', True),
+    ArtifactConfig('android-mcts.zip', True),
     ArtifactConfig('android-mts.zip', True),
     ArtifactConfig('android-pts.zip', True),
     ArtifactConfig('android-vts.zip', True),
