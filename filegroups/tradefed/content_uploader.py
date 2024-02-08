@@ -121,7 +121,9 @@ ARTIFACTS = [
 # Artifacts will be uploaded if the config name is set in arguments `--experiment_artifacts`.
 # These configs are usually used to upload artifacts in partial branches/targets for experiment
 # purpose.
-EXPERIMENT_ARTIFACT_CONFIGS = []
+# A sample entry:
+#   "device_image_target_files": ArtifactConfig('*-target_files-*.zip', True)
+EXPERIMENT_ARTIFACT_CONFIGS = {}
 
 def _init_cas_info() -> CasInfo:
     client_path = _get_client()
