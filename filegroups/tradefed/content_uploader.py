@@ -88,6 +88,7 @@ ARTIFACTS = [
     ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
     ArtifactConfig('android-gts.zip', True),
+    ArtifactConfig('android-mcts.zip', True),
     ArtifactConfig('android-mts.zip', True),
     ArtifactConfig('android-pts.zip', True),
     ArtifactConfig('android-vts.zip', True),
@@ -120,7 +121,9 @@ ARTIFACTS = [
 # Artifacts will be uploaded if the config name is set in arguments `--experiment_artifacts`.
 # These configs are usually used to upload artifacts in partial branches/targets for experiment
 # purpose.
-EXPERIMENT_ARTIFACT_CONFIGS = []
+# A sample entry:
+#   "device_image_target_files": ArtifactConfig('*-target_files-*.zip', True)
+EXPERIMENT_ARTIFACT_CONFIGS = {}
 
 def _init_cas_info() -> CasInfo:
     client_path = _get_client()
