@@ -105,6 +105,7 @@ ARTIFACTS = [
     ArtifactConfig('google-tradefed.zip', True),
     ArtifactConfig('robolectric-tests.zip', True),
     ArtifactConfig('ravenwood-tests.zip', True),
+    ArtifactConfig('test_mappings.zip', True),
 
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
