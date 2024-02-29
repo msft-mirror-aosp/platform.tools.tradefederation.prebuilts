@@ -35,10 +35,12 @@ class ArtifactConfig:
     Attributes:
         source_path: path to the artifact that relative to the root of source code.
         unzip: true if the artifact should be unzipped and uploaded as a directory.
+        chunk: true if the artifact should be uploaded with chunking.
         exclude_filters: a list of regular expressions for files that are excluded from uploading.
     """
     source_path: str
     unzip: bool
+    chunk: bool = False
     exclude_filters: list[str] = dataclasses.field(default_factory=list)
 
 
@@ -87,7 +89,9 @@ ARTIFACTS = [
     ArtifactConfig('android-catbox.zip', True),
     ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
+    ArtifactConfig('android-gcatbox.zip', True),
     ArtifactConfig('android-gts.zip', True),
+    ArtifactConfig('android-mcts.zip', True),
     ArtifactConfig('android-mts.zip', True),
     ArtifactConfig('android-pts.zip', True),
     ArtifactConfig('android-vts.zip', True),
@@ -101,6 +105,7 @@ ARTIFACTS = [
     ArtifactConfig('google-tradefed.zip', True),
     ArtifactConfig('robolectric-tests.zip', True),
     ArtifactConfig('ravenwood-tests.zip', True),
+    ArtifactConfig('test_mappings.zip', True),
 
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
@@ -109,6 +114,7 @@ ARTIFACTS = [
     ArtifactConfig('device-tests_host-shared-libs.zip', True),
     ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
+    ArtifactConfig('*-continuous_instrumentation_metric_tests-*zip', True),
     ArtifactConfig('*-continuous_native_tests-*zip', True),
     ArtifactConfig('cvd-host_package.tar.gz', False),
     ArtifactConfig('bootloader.img', False),
@@ -120,7 +126,11 @@ ARTIFACTS = [
 # Artifacts will be uploaded if the config name is set in arguments `--experiment_artifacts`.
 # These configs are usually used to upload artifacts in partial branches/targets for experiment
 # purpose.
-EXPERIMENT_ARTIFACT_CONFIGS = []
+# A sample entry:
+#   "device_image_target_files": ArtifactConfig('*-target_files-*.zip', True)
+EXPERIMENT_ARTIFACT_CONFIGS = {
+    "device_image_proguard_dict": ArtifactConfig('*-proguard-dict-*.zip', False, True),
+}
 
 def _init_cas_info() -> CasInfo:
     client_path = _get_client()
@@ -223,14 +233,10 @@ def _upload(
             '-use-adc',
         ]
 
-        if artifact.unzip:
-            cmd = cmd + ['-zip-path', artifact.source_path]
-        else:
-            # TODO(b/250643926) This is a workaround to handle non-directory files.
-            tmp_dir = tempfile.mkdtemp(dir=working_dir)
-            target_path = os.path.join(tmp_dir, os.path.basename(artifact.source_path))
-            shutil.copy(artifact.source_path, target_path)
-            cmd = cmd + ['-dir-path', tmp_dir]
+        cmd = cmd + _path_for_artifact(artifact, working_dir)
+
+        if artifact.chunk:
+            cmd = cmd + ['-chunk']
 
         for exclude_filter in artifact.exclude_filters:
             cmd = cmd + ['-exclude-filters', exclude_filter]
@@ -278,6 +284,18 @@ def _upload(
                 logging.warning('Failed to parse uploaded content details: %s', e)
 
         return UploadResult(digest, content_details)
+
+
+def _path_for_artifact(artifact: ArtifactConfig, working_dir: str) -> [str]:
+    if artifact.unzip:
+        return ['-zip-path', artifact.source_path]
+    if artifact.chunk:
+        return ['-file-path', artifact.source_path]
+    # TODO(b/250643926) This is a workaround to handle non-directory files.
+    tmp_dir = tempfile.mkdtemp(dir=working_dir)
+    target_path = os.path.join(tmp_dir, os.path.basename(artifact.source_path))
+    shutil.copy(artifact.source_path, target_path)
+    return ['-dir-path', tmp_dir]
 
 
 def _output_results(
