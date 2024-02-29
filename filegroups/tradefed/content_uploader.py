@@ -89,6 +89,7 @@ ARTIFACTS = [
     ArtifactConfig('android-catbox.zip', True),
     ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
+    ArtifactConfig('android-gcatbox.zip', True),
     ArtifactConfig('android-gts.zip', True),
     ArtifactConfig('android-mcts.zip', True),
     ArtifactConfig('android-mts.zip', True),
@@ -104,6 +105,7 @@ ARTIFACTS = [
     ArtifactConfig('google-tradefed.zip', True),
     ArtifactConfig('robolectric-tests.zip', True),
     ArtifactConfig('ravenwood-tests.zip', True),
+    ArtifactConfig('test_mappings.zip', True),
 
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
@@ -112,6 +114,7 @@ ARTIFACTS = [
     ArtifactConfig('device-tests_host-shared-libs.zip', True),
     ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
+    ArtifactConfig('*-continuous_instrumentation_metric_tests-*zip', True),
     ArtifactConfig('*-continuous_native_tests-*zip', True),
     ArtifactConfig('cvd-host_package.tar.gz', False),
     ArtifactConfig('bootloader.img', False),
