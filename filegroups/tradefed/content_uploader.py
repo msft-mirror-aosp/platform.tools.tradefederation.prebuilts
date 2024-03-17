@@ -107,6 +107,10 @@ ARTIFACTS = [
     ArtifactConfig('ravenwood-tests.zip', True),
     ArtifactConfig('test_mappings.zip', True),
 
+    # Mainline artifacts
+    #ArtifactConfig('*.apex', False),
+    #ArtifactConfig('*.apk', False),
+
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
     ArtifactConfig('device-tests.zip', True),
