@@ -54,12 +54,7 @@ if [ "${JAVA_VERSION}" == "" ]; then
     >&2 echo "Wrong java version. 1.8, 9, 11, 17 or 21 is required. Found $java_version_string"
     >&2 echo "PATH value:"
     >&2 echo "$PATH"
-    if [ "${IGNORE_JAVA_VERSION_ERROR}" == "y" ]; then
-        >&2 echo "Ignoring the wrong java version error as \$IGNORE_JAVA_VERSION_ERROR is set to 'y'"
-    else
-        >&2 echo "If you want to ignore this error, set \$IGNORE_JAVA_VERSION_ERROR to 'y'"
-        exit 8
-    fi
+    exit 8
 fi
 
 # check if java is above 9 and supports add-opens
