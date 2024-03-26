@@ -57,9 +57,9 @@ if [ "${JAVA_VERSION}" == "" ]; then
     exit 8
 fi
 
-# check if java is above 9 and supports add-opens
-JAVA_VERSION=$(echo "$java_version_string" | grep 'version [ "]\(9\|11\|17\|21\).*[ "]')
-if [ "${JAVA_VERSION}" != "" ]; then
+# java versions below 1.8 are not supported, java versions above 1.8 need add-opens
+JAVA_VERSION=$(echo "$java_version_string" | grep 'version [ "]1\.8.*[ "]')
+if [ "${JAVA_VERSION}" == "" ]; then
     ADD_OPENS_FLAG="--add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED"
 fi
 
