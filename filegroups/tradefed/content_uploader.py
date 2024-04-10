@@ -16,6 +16,7 @@
 
 """The script to upload generated artifacts from build server to CAS."""
 import argparse
+import copy
 import dataclasses
 import glob
 import json
@@ -35,10 +36,14 @@ class ArtifactConfig:
     Attributes:
         source_path: path to the artifact that relative to the root of source code.
         unzip: true if the artifact should be unzipped and uploaded as a directory.
+        chunk: true if the artifact should be uploaded with chunking.
+        chunk_fallback: true if a regular version (no chunking) of the artifact should be uploaded.
         exclude_filters: a list of regular expressions for files that are excluded from uploading.
     """
     source_path: str
     unzip: bool
+    chunk: bool = False
+    chunk_fallback: bool = False
     exclude_filters: list[str] = dataclasses.field(default_factory=list)
 
 
@@ -75,19 +80,24 @@ CAS_UPLOADER_PATH = 'tools/content_addressed_storage/prebuilts/'
 CAS_UPLOADER_BIN = 'casuploader'
 
 UPLOADER_TIMEOUT_SECS = 600 # 10 minutes
+AVG_CHUNK_SIZE_IN_KB = 128
 
 DIGESTS_PATH = 'cas_digests.json'
 LOG_PATH = 'logs/cas_uploader.log'
 CONTENT_DETAILS_PATH = 'logs/cas_content_details.json'
+CHUNKED_ARTIFACT_NAME_PREFIX = "_chunked_"
 
 # Configurations of artifacts will be uploaded to CAS.
 # TODO(b/298890453) Add artifacts after this script is attached to build process.
+# If configs share files, chunking enabled artifacts should come first.
 ARTIFACTS = [
     # test_suite targets
     ArtifactConfig('android-catbox.zip', True),
     ArtifactConfig('android-csuite.zip', True),
     ArtifactConfig('android-cts.zip', True),
+    ArtifactConfig('android-gcatbox.zip', True),
     ArtifactConfig('android-gts.zip', True),
+    ArtifactConfig('android-mcts.zip', True),
     ArtifactConfig('android-mts.zip', True),
     ArtifactConfig('android-pts.zip', True),
     ArtifactConfig('android-vts.zip', True),
@@ -101,22 +111,36 @@ ARTIFACTS = [
     ArtifactConfig('google-tradefed.zip', True),
     ArtifactConfig('robolectric-tests.zip', True),
     ArtifactConfig('ravenwood-tests.zip', True),
+    ArtifactConfig('test_mappings.zip', True),
+
+    # Mainline artifacts
+    ArtifactConfig('*.apex', False),
+    ArtifactConfig('*.apk', False),
 
     # Device target artifacts
     ArtifactConfig('androidTest.zip', True),
     ArtifactConfig('device-tests.zip', True),
     ArtifactConfig('device-tests_configs.zip', True),
+    ArtifactConfig('device-tests_host-shared-libs.zip', True),
     ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
+    ArtifactConfig('*-continuous_instrumentation_metric_tests-*zip', True),
     ArtifactConfig('*-continuous_native_tests-*zip', True),
     ArtifactConfig('cvd-host_package.tar.gz', False),
-    ArtifactConfig('*-img-*zip', False)
+    ArtifactConfig('bootloader.img', False),
+    ArtifactConfig('radio.img', False),
+    ArtifactConfig('*-target_files-*.zip', True),
+    ArtifactConfig('*-img-*zip', False, True, True)
 ]
 
 # Artifacts will be uploaded if the config name is set in arguments `--experiment_artifacts`.
 # These configs are usually used to upload artifacts in partial branches/targets for experiment
 # purpose.
-EXPERIMENT_ARTIFACT_CONFIGS = []
+# A sample entry:
+#   "device_image_target_files": ArtifactConfig('*-target_files-*.zip', True)
+EXPERIMENT_ARTIFACT_CONFIGS = {
+    "device_image_proguard_dict": ArtifactConfig('*-proguard-dict-*.zip', False, True, True),
+}
 
 def _init_cas_info() -> CasInfo:
     client_path = _get_client()
@@ -219,14 +243,10 @@ def _upload(
             '-use-adc',
         ]
 
-        if artifact.unzip:
-            cmd = cmd + ['-zip-path', artifact.source_path]
-        else:
-            # TODO(b/250643926) This is a workaround to handle non-directory files.
-            tmp_dir = tempfile.mkdtemp(dir=working_dir)
-            target_path = os.path.join(tmp_dir, os.path.basename(artifact.source_path))
-            shutil.copy(artifact.source_path, target_path)
-            cmd = cmd + ['-dir-path', tmp_dir]
+        cmd = cmd + _path_for_artifact(artifact, working_dir)
+
+        if artifact.chunk:
+            cmd = cmd + ['-chunk', '-avg-chunk-size', str(AVG_CHUNK_SIZE_IN_KB)]
 
         for exclude_filter in artifact.exclude_filters:
             cmd = cmd + ['-exclude-filters', exclude_filter]
@@ -276,6 +296,18 @@ def _upload(
         return UploadResult(digest, content_details)
 
 
+def _path_for_artifact(artifact: ArtifactConfig, working_dir: str) -> [str]:
+    if artifact.unzip:
+        return ['-zip-path', artifact.source_path]
+    if artifact.chunk:
+        return ['-file-path', artifact.source_path]
+    # TODO(b/250643926) This is a workaround to handle non-directory files.
+    tmp_dir = tempfile.mkdtemp(dir=working_dir)
+    target_path = os.path.join(tmp_dir, os.path.basename(artifact.source_path))
+    shutil.copy(artifact.source_path, target_path)
+    return ['-dir-path', tmp_dir]
+
+
 def _output_results(
         cas_info: CasInfo,
         output_dir: str,
@@ -303,16 +335,27 @@ def _upload_all_artifacts(cas_info: CasInfo, all_artifacts: ArtifactConfig,
     dist_dir: str, working_dir: str, log_file:str):
     file_digests = {}
     content_details = []
+    skip_files = []
+    _add_fallback_artifacts(all_artifacts)
     for artifact in all_artifacts:
         source_path = artifact.source_path
         for f in glob.glob(dist_dir + '/**/' + source_path, recursive=True):
             start = time.time()
-            name = os.path.basename(f)
+            basename = os.path.basename(f)
+            name = _artifact_name(basename, artifact.chunk)
+
+            # Avoid redundant upload if multiple ArtifactConfigs share files.
+            if name in file_digests or name in skip_files:
+                continue
+
             artifact.source_path = f
             result = _upload(cas_info, artifact, working_dir, log_file)
 
             if result and result.digest:
                 file_digests[name] = result.digest
+                if artifact.chunk and not artifact.chunk_fallback:
+                    # Skip the regular version even it matches other configs.
+                    skip_files.append(basename)
             else:
                 logging.warning(
                     'Skip to save the digest of file %s, the uploading may fail', name
@@ -334,6 +377,17 @@ def _upload_all_artifacts(cas_info: CasInfo, all_artifacts: ArtifactConfig,
         content_details,
     )
 
+
+def _add_fallback_artifacts(artifacts: list[ArtifactConfig]):
+    for artifact in artifacts:
+        if artifact.chunk and artifact.chunk_fallback:
+            fallback_artifact = copy.copy(artifact)
+            fallback_artifact.chunk = False
+            artifacts.append(fallback_artifact)
+
+
+def _artifact_name(basename: str, chunk: bool) -> str:
+    return CHUNKED_ARTIFACT_NAME_PREFIX + basename if chunk else basename
 
 
 def main():
@@ -372,3 +426,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
