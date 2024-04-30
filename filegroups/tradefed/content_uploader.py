@@ -100,6 +100,7 @@ ARTIFACTS = [
     ArtifactConfig('android-mcts.zip', True),
     ArtifactConfig('android-mts.zip', True),
     ArtifactConfig('android-pts.zip', True),
+    ArtifactConfig('android-sts.zip', True),
     ArtifactConfig('android-vts.zip', True),
     ArtifactConfig('art-host-tests.zip', True),
     ArtifactConfig('bazel-test-suite.zip', True),
