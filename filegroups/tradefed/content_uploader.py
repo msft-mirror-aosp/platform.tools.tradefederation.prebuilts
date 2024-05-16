@@ -132,6 +132,7 @@ ARTIFACTS = [
     ArtifactConfig('bootloader.img', False),
     ArtifactConfig('radio.img', False),
     ArtifactConfig('*-target_files-*.zip', True),
+    ArtifactConfig('oriole*-img-*zip', True, True, True),
     ArtifactConfig('*-img-*zip', False, True, True)
 ]
 
