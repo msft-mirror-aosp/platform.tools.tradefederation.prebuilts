@@ -86,6 +86,7 @@ DIGESTS_PATH = 'cas_digests.json'
 LOG_PATH = 'logs/cas_uploader.log'
 CONTENT_DETAILS_PATH = 'logs/cas_content_details.json'
 CHUNKED_ARTIFACT_NAME_PREFIX = "_chunked_"
+CHUNKED_DIR_ARTIFACT_NAME_PREFIX = "_chunked_dir_"
 
 # Configurations of artifacts will be uploaded to CAS.
 # TODO(b/298890453) Add artifacts after this script is attached to build process.
@@ -131,6 +132,7 @@ ARTIFACTS = [
     ArtifactConfig('bootloader.img', False),
     ArtifactConfig('radio.img', False),
     ArtifactConfig('*-target_files-*.zip', True),
+    ArtifactConfig('oriole*-img-*zip', True, True, True),
     ArtifactConfig('*-img-*zip', False, True, True)
 ]
 
@@ -154,10 +156,16 @@ def _init_cas_info() -> CasInfo:
 
 
 def _get_client() -> str:
+    if CAS_UPLOADER_PREBUILT_PATH in os.path.abspath(__file__):
+        return _get_prebuilt_client()
     bin_path = os.path.join(CAS_UPLOADER_PATH, CAS_UPLOADER_BIN)
     if os.path.isfile(bin_path):
         logging.info('Using client at %s', bin_path)
         return bin_path
+    return _get_prebuilt_client()
+
+
+def _get_prebuilt_client() -> str:
     client = glob.glob(CAS_UPLOADER_PREBUILT_PATH + '**/' + CAS_UPLOADER_BIN, recursive=True)
     if not client:
         raise ValueError('Could not find casuploader binary')
@@ -343,7 +351,7 @@ def _upload_all_artifacts(cas_info: CasInfo, all_artifacts: ArtifactConfig,
         for f in glob.glob(dist_dir + '/**/' + source_path, recursive=True):
             start = time.time()
             basename = os.path.basename(f)
-            name = _artifact_name(basename, artifact.chunk)
+            name = _artifact_name(basename, artifact.chunk, artifact.unzip)
 
             # Avoid redundant upload if multiple ArtifactConfigs share files.
             if name in file_digests or name in skip_files:
@@ -354,7 +362,7 @@ def _upload_all_artifacts(cas_info: CasInfo, all_artifacts: ArtifactConfig,
 
             if result and result.digest:
                 file_digests[name] = result.digest
-                if artifact.chunk and not artifact.chunk_fallback:
+                if artifact.chunk and (not artifact.chunk_fallback or artifact.unzip):
                     # Skip the regular version even it matches other configs.
                     skip_files.append(basename)
             else:
@@ -380,15 +388,27 @@ def _upload_all_artifacts(cas_info: CasInfo, all_artifacts: ArtifactConfig,
 
 
 def _add_fallback_artifacts(artifacts: list[ArtifactConfig]):
+    """Add a fallback artifact if chunking is enabled for an artifact.
+
+    For unzip artifacts, the fallback is the zipped chunked version.
+    For the rest, the fallback is the standard version (not chunked).
+    """
     for artifact in artifacts:
         if artifact.chunk and artifact.chunk_fallback:
             fallback_artifact = copy.copy(artifact)
-            fallback_artifact.chunk = False
+            if artifact.unzip:
+                fallback_artifact.unzip = False
+            else:
+                fallback_artifact.chunk = False
             artifacts.append(fallback_artifact)
 
 
-def _artifact_name(basename: str, chunk: bool) -> str:
-    return CHUNKED_ARTIFACT_NAME_PREFIX + basename if chunk else basename
+def _artifact_name(basename: str, chunk: bool, unzip: bool) -> str:
+    if not chunk:
+        return basename
+    if unzip:
+        return CHUNKED_DIR_ARTIFACT_NAME_PREFIX + basename
+    return CHUNKED_ARTIFACT_NAME_PREFIX + basename
 
 
 def main():
