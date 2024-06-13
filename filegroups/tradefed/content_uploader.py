@@ -128,6 +128,9 @@ ARTIFACTS = [
     ArtifactConfig('device-platinum-tests.zip', True),
     ArtifactConfig('device-platinum-tests_configs.zip', True),
     ArtifactConfig('device-platinum-tests_host-shared-libs.zip', True),
+    ArtifactConfig('device-pixel-tests.zip', True),
+    ArtifactConfig('device-pixel-tests_configs.zip', True),
+    ArtifactConfig('device-pixel-tests_host-shared-libs.zip', True),
     ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_metric_tests-*zip', True),
@@ -136,8 +139,7 @@ ARTIFACTS = [
     ArtifactConfig('bootloader.img', False),
     ArtifactConfig('radio.img', False),
     ArtifactConfig('*-target_files-*.zip', True),
-    ArtifactConfig('oriole*-img-*zip', True, True, True),
-    ArtifactConfig('*-img-*zip', False, True, True)
+    ArtifactConfig('*-img-*zip', True, True, True)
 ]
 
 # Artifacts will be uploaded if the config name is set in arguments `--experiment_artifacts`.
