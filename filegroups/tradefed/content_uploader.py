@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 import subprocess
 import tempfile
 import time
@@ -74,6 +75,9 @@ class UploadResult:
     digest: str
     content_details: list[dict[str,any]]
 
+CONTENT_PLOADER_PREBUILT_PATH = 'tools/tradefederation/prebuilts/'
+CONTENT_UPLOADER_BIN = 'content_uploader'
+CONTENT_UPLOADER_TIMEOUT_SECS = 1800 # 30 minutes
 
 CAS_UPLOADER_PREBUILT_PATH = 'tools/tradefederation/prebuilts/'
 CAS_UPLOADER_PATH = 'tools/content_addressed_storage/prebuilts/'
@@ -103,6 +107,7 @@ ARTIFACTS = [
     ArtifactConfig('android-pts.zip', True, exclude_filters=['android-pts/jdk/.*']),
     ArtifactConfig('android-sts.zip', True),
     ArtifactConfig('android-vts.zip', True),
+    ArtifactConfig('android-wts.zip', True, exclude_filters=['android-wts/jdk/.*']),
     ArtifactConfig('art-host-tests.zip', True),
     ArtifactConfig('bazel-test-suite.zip', True),
     ArtifactConfig('host-unit-tests.zip', True),
@@ -128,6 +133,12 @@ ARTIFACTS = [
     ArtifactConfig('device-platinum-tests.zip', True),
     ArtifactConfig('device-platinum-tests_configs.zip', True),
     ArtifactConfig('device-platinum-tests_host-shared-libs.zip', True),
+    ArtifactConfig('camera-hal-tests.zip', True),
+    ArtifactConfig('camera-hal-tests_configs.zip', True),
+    ArtifactConfig('camera-hal-tests_host-shared-libs.zip', True),
+    ArtifactConfig('device-pixel-tests.zip', True),
+    ArtifactConfig('device-pixel-tests_configs.zip', True),
+    ArtifactConfig('device-pixel-tests_host-shared-libs.zip', True),
     ArtifactConfig('*-tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_tests-*zip', True),
     ArtifactConfig('*-continuous_instrumentation_metric_tests-*zip', True),
@@ -136,8 +147,7 @@ ARTIFACTS = [
     ArtifactConfig('bootloader.img', False),
     ArtifactConfig('radio.img', False),
     ArtifactConfig('*-target_files-*.zip', True),
-    ArtifactConfig('oriole*-img-*zip', True, True, True),
-    ArtifactConfig('*-img-*zip', False, True, True)
+    ArtifactConfig('*-img-*zip', True, True, True)
 ]
 
 # Artifacts will be uploaded if the config name is set in arguments `--experiment_artifacts`.
@@ -148,6 +158,14 @@ ARTIFACTS = [
 EXPERIMENT_ARTIFACT_CONFIGS = {
     "device_image_proguard_dict": ArtifactConfig('*-proguard-dict-*.zip', False, True, True),
 }
+
+def _get_prebuilt_uploader() -> str:
+    uploader = glob.glob(CONTENT_PLOADER_PREBUILT_PATH + '**/' + CONTENT_UPLOADER_BIN,
+                         recursive=True)
+    if not uploader:
+        logging.error('%s not found in Tradefed prebuilt', CONTENT_UPLOADER_BIN)
+        return None
+    return uploader[0]
 
 def _init_cas_info() -> CasInfo:
     client_path = _get_client()
@@ -429,13 +447,26 @@ def main():
 
     dist_dir = _get_env_var('DIST_DIR', check=True)
     log_file = os.path.join(dist_dir, LOG_PATH)
-    print('content_uploader.py will export logs to:', log_file)
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s %(levelname)s %(message)s',
         filename=log_file,
     )
     logging.info('Environment variables of running server: %s', os.environ)
+
+    uploader = _get_prebuilt_uploader()
+    if uploader:
+        arguments = sys.argv[1:]
+        try:
+            result = subprocess.run([uploader] + arguments, capture_output=True, text=True,
+                                    check=True, timeout=CONTENT_UPLOADER_TIMEOUT_SECS)
+            print(result.stdout)
+            return
+        except Exception as e:  # pylint: disable=broad-except
+            logging.exception('Unexpected exception with %s: %s', uploader, e)
+            # fall through to exiting logic
+
+    print('content_uploader.py will export logs to:', log_file)
 
     additional_artifacts = _parse_additional_artifacts(args)
     cas_info = _init_cas_info()
@@ -451,4 +482,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
