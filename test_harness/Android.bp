@@ -55,3 +55,25 @@ java_import_host {
     jars: [":compatibility-host-util-prebuilt"],
     installable: true,
 }
+
+java_genrule_host {
+    name: "prebuilt_tradefed_zip",
+    tools: ["soong_zip"],
+    srcs: [
+        ":tradefed",
+        ":tradefed_dist_artifacts",
+        ":compatibility-tradefed-prebuilt",
+        ":compatibility-host-util-prebuilt",
+    ],
+    out: ["tradefed.zip"],
+    cmd: "mkdir -p $(genDir)/tmp && " +
+        "cp -f $(in) $(genDir)/tmp && " +
+        "$(location soong_zip) -o $(out) -C $(genDir)/tmp -D $(genDir)/tmp",
+}
+
+// This is workaround to get the prebuilt tradefed.zip
+prebuilt_etc_host {
+    name: "prebuilt_etc_tradefed_zip",
+    src: ":prebuilt_tradefed_zip",
+    filename: "tradefed.zip",
+}
