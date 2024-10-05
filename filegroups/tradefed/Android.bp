@@ -36,3 +36,24 @@ filegroup {
     ],
     srcs: ["loganalysis.jar"],
 }
+
+filegroup {
+    name: "tradefed_dist_artifacts",
+    visibility: [
+        "//tools/tradefederation/prebuilts/test_harness",
+    ],
+    srcs: [
+        "atest_tradefed.sh",
+        "loganalysis.jar",
+        "script_help.sh",
+        "tf-contrib-tests.jar",
+        "tradefed.sh",
+        "tradefed-contrib.jar",
+        "tradefed-isolation.jar",
+        "tradefed-tests.jar",
+        "tradefed_win.bat",
+        "version.txt",
+        "TradeFedUiTestApp.apk",
+        "TradeFedTestApp.apk",
+    ],
+}
