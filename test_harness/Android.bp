@@ -26,7 +26,6 @@ java_import_host {
     jars: [
         ":platformprotos", // Should be first to force using protos from the branch
         ":tradefed-prebuilt",
-        ":tradefed-test-framework-prebuilt",
     ],
     installable: true,
 }
@@ -35,15 +34,6 @@ java_import_host {
 java_import_host {
     name: "tradefed-no-fwk",
     jars: [":tradefed-prebuilt"],
-    installable: true,
-}
-
-java_import_host {
-    name: "tradefed-test-framework",
-    jars: [
-        ":platformprotos", // Should be first to force using protos from the branch
-        ":tradefed-test-framework-prebuilt"
-    ],
     installable: true,
 }
 
