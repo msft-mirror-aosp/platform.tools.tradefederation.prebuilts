@@ -41,9 +41,18 @@ def _get_env_var(key: str, default=None, check=False):
         raise ValueError(f'Error: the environment variable {key} is not set')
     return value
 
+def _truncate_file(file_path: str):
+    try:
+        with open(file_path, 'w'):
+            pass
+    except Exception as e:
+        print(f"Failed to trunacte file: {e}")
+
+
 def _setup_logging() -> str:
     dist_dir = _get_env_var('DIST_DIR', check=True)
     log_file = os.path.join(dist_dir, LOG_PATH)
+    _truncate_file(log_file)
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s %(levelname)s %(message)s',
@@ -65,6 +74,13 @@ def main():
     except FileNotFoundError:
         print(f'content_uploader.py will export logs to: {log_file}')
         logging.error('Uploader not found: %s', log_file)
+    except subprocess.CalledProcessError as e:
+        print(f'content_uploader.py will export logs to: {log_file}')
+        logging.error(f"Error: Command failed with exit code {e.returncode}\nCommand: {e.cmd}\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}")
+    except ValueError as e:
+        # Capture and log all errors - not to fail the build.
+        print(f'content_uploader.py will export logs to: {log_file}')
+        logging.exception("Unexpected error: %s", e)
 
 if __name__ == '__main__':
     main()
