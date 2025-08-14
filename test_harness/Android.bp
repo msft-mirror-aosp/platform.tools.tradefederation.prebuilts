@@ -69,11 +69,33 @@ java_genrule_host {
     cmd: "mkdir -p $(genDir)/tmp && " +
         "cp -f $(in) $(genDir)/tmp && " +
         "$(location soong_zip) -o $(out) -C $(genDir)/tmp -D $(genDir)/tmp",
+    dist: {
+        targets: ["tradefed"],
+    },
+    enabled: select(soong_config_variable("tradefed", "use_prebuilt"), {
+        true: true,
+        default: false,
+    }),
 }
 
-// This is workaround to get the prebuilt tradefed.zip
-prebuilt_etc_host {
-    name: "prebuilt_etc_tradefed_zip",
-    src: ":prebuilt_tradefed_zip",
-    filename: "tradefed.zip",
+phony_rule {
+    name: "tradefed-core",
+    phony_deps: select(soong_config_variable("tradefed", "use_prebuilt"), {
+        true: [
+            "tradefed",
+            "atest_tradefed.sh",
+        ],
+        default: ["tradefed-core-src"],
+    }),
+}
+
+phony_rule {
+    name: "tradefed-all",
+    phony_deps: select(soong_config_variable("tradefed", "use_prebuilt"), {
+        true: [
+            "tradefed",
+            "atest_tradefed.sh",
+        ],
+        default: ["tradefed-all-src"],
+    }),
 }
