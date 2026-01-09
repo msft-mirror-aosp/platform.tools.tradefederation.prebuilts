@@ -76,6 +76,13 @@ java_genrule_host {
         true: true,
         default: false,
     }),
+    // Force disable it for windows due to the tradefed in srcs is a java_import_host
+    // type which don't have windows target.
+    target: {
+        windows: {
+            enabled: false,
+        },
+    },
 }
 
 phony_rule {
