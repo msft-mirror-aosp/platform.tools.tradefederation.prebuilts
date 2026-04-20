@@ -79,6 +79,8 @@ fi
 if [ -n "${ATEST_HOST_JARS}" ]; then
     echo "Replaced TF_PATH from ${TF_PATH} to ${ATEST_HOST_JARS}"
     TF_PATH=${ATEST_HOST_JARS}
+else
+    echo "Using TF_PATH: ${TF_PATH}"
 fi
 
 # Customize TF related settings for ATest local run to align with test runs on
