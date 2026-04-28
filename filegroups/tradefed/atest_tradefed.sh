@@ -43,7 +43,10 @@ if [[ ! -z "$ANDROID_HOST_OUT" ]]; then
           tradefed-isolation.jar
           host-libprotobuf-java-full.jar
           cts-dalvik-host-test-runner.jar
-          compatibility-tradefed.jar"
+          compatibility-tradefed.jar
+          loganalysis.jar
+          grpc-java-netty.jar
+          netty-unshaded-1.56.0.jar"
     for dep in $deps; do
         if [ -f "$ANDROID_HOST_OUT/framework/$dep" ]; then
           TF_PATH+=":$ANDROID_HOST_OUT/framework/$dep"
