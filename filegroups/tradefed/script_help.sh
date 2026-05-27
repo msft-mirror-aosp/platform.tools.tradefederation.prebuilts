@@ -49,9 +49,9 @@ checkPath ${TF_JAVA}
 
 # check java version
 java_version_string=$(${TF_JAVA} -version 2>&1)
-JAVA_VERSION=$(echo "$java_version_string" | grep 'version [ "]\(1\.8\|9\|11\|17\|21\).*[ "]')
+JAVA_VERSION=$(echo "$java_version_string" | grep 'version [ "]\(1\.8\|9\|11\|17\|21\|25\).*[ "]')
 if [ "${JAVA_VERSION}" == "" ]; then
-    >&2 echo "Wrong java version. 1.8, 9, 11, 17 or 21 is required. Found $java_version_string"
+    >&2 echo "Wrong java version. 1.8, 9, 11, 17, 21 or 25 is required. Found $java_version_string"
     >&2 echo "PATH value:"
     >&2 echo "$PATH"
     if [ "${IGNORE_JAVA_VERSION_ERROR}" == "y" ]; then
