@@ -68,10 +68,14 @@ if [ ! -d $TF_CORE_DIR ]; then
     fi
 fi
 
-if [ "$(uname)" == "Darwin" ]; then
-    local_tmp_dir="$ANDROID_HOST_OUT/tmp"
-    [[ -f "$local_tmp_dir" ]] || mkdir -p "$local_tmp_dir"
-    java_tmp_dir_opt="-Djava.io.tmpdir=$local_tmp_dir"
+# If TF_TEMP_DIR is set, let TF use it as the temp dir.
+# If /tmp/ and `$ANDROID_HOST_OUT/` are on different disks,
+# you may get "No space left on device" when using `--sharding`.
+# When you get it, `export TF_TEMP_DIR=$ANDROID_HOST_OUT/tradefed_tmp` should fix it.
+# (See b/525149794 for more informati)
+if [[ "$TF_TEMP_DIR" != "" ]]; then
+    mkdir -p "$TF_TEMP_DIR"
+    java_tmp_dir_opt="-Djava.io.tmpdir=$TF_TEMP_DIR"
 fi
 
 # Override the TF classpath with the minimal set of jars that correspond to the
