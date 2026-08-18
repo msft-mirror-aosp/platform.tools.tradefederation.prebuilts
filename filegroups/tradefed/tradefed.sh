@@ -52,6 +52,9 @@ fi
 # Note: must leave $RDBG_FLAG and $TRADEFED_OPTS unquoted so that they go away
 # when unset
 # Disable JAXP total entity size limit to allow parsing large XML configs (like LTP) under newer JDKs (e.g. JDK 25).
+# Disable ZIP64 extra field validation for compatibility with older ZIP archives (b/545208070).
 exec ${TF_JAVA} $ADD_OPENS_FLAG $RDBG_FLAG ${TF_JVM_OPTIONS} -XX:+HeapDumpOnOutOfMemoryError \
-  -XX:-OmitStackTraceInFastThrow -Djdk.xml.totalEntitySizeLimit=0 $TRADEFED_OPTS \
+  -XX:-OmitStackTraceInFastThrow -Djdk.xml.totalEntitySizeLimit=0 \
+  -Djdk.xml.entityExpansionLimit=10000 \
+  -Djdk.util.zip.disableZip64ExtraFieldValidation=true $TRADEFED_OPTS \
   -cp "${TF_PATH}" -DTF_JAR_DIR=${TF_JAR_DIR} $CONSOLE_CLASS "$@"
