@@ -56,5 +56,8 @@ fi
 exec ${TF_JAVA} $ADD_OPENS_FLAG $RDBG_FLAG ${TF_JVM_OPTIONS} -XX:+HeapDumpOnOutOfMemoryError \
   -XX:-OmitStackTraceInFastThrow -Djdk.xml.totalEntitySizeLimit=0 \
   -Djdk.xml.entityExpansionLimit=10000 \
-  -Djdk.util.zip.disableZip64ExtraFieldValidation=true $TRADEFED_OPTS \
+  -Djdk.util.zip.disableZip64ExtraFieldValidation=true \
+  -XX:+IgnoreUnrecognizedVMOptions \
+  --sun-misc-unsafe-memory-access=allow \
+  --enable-native-access=ALL-UNNAMED $TRADEFED_OPTS \
   -cp "${TF_PATH}" -DTF_JAR_DIR=${TF_JAR_DIR} $CONSOLE_CLASS "$@"
