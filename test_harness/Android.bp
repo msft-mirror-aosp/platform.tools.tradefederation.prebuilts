@@ -43,6 +43,15 @@ java_import_host {
     installable: true,
 }
 
+java_import_host {
+    name: "tradefed-contrib",
+    visibility: [
+        "//test/catbox/tools/catbox-tradefed",
+    ],
+    jars: [":tradefed-contrib-prebuilt"],
+    installable: true,
+}
+
 // Targets for test suites
 java_import_host {
     name: "compatibility-tradefed",
